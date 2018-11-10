@@ -157,7 +157,7 @@ public:
          else
             cover(j);
       }
-      goto D2;
+      goto D2; //recurse
       
    D6: // Try next x_l
       for(auto p = t.back() - 1; p != t.back(); --p) {
@@ -167,14 +167,14 @@ public:
          else
             uncover(j);
       }
-         i = _nodes[t.back()]._top;
-         t.back() = _nodes[t.back()]._dlink;
-         goto D5;
+      i = _nodes[t.back()]._top;
+      t.back() = _nodes[t.back()]._dlink;
+      goto D5;
 
    D7: // Backtrack
       uncover(i);
    D8: // Leave level l
-      if (t.size()==0)
+      if (t.size()==1)
          return;
       t.pop_back();
       goto D6;
