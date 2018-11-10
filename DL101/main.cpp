@@ -134,42 +134,43 @@ public:
    void algorithmD() {
       vector<NodePtr> t;
       NodePtr i;
-   D1: // Initialize
+//   D1: // Initialize
 //      ItemPtr len = 0;
 //      auto z = _nodes.size()-1;
+      
    D2: //Enter level l
       if(_items[0]._rlink == 0) {
          showSolution(t);
          goto D6; //return
       }
-   D3: // Choose i
+//   D3: // Choose i
       i = _items[0]._rlink;
-   D4: // Cover i
+//   D4: // Cover i
       cover(i);
       t.push_back(_nodes[i]._dlink);
-   D5: // Try x_l (in our case, t.back())
-      if (t.back() == i)
-         goto D7;
-      for (auto p = t.back()+1; p != t.back(); ++p) {
-         auto j = _nodes[p]._top;
-         if (j <= 0)
-            p = _nodes[p]._ulink-1; //hacky, fix this
-         else
-            cover(j);
+      while(t.back() != i) {
+//      D5: // Try x_l (in our case, t.back())
+         for (auto p = t.back()+1; p != t.back(); ++p) {
+            auto j = _nodes[p]._top;
+            if (j <= 0)
+               p = _nodes[p]._ulink-1; //hacky, fix this
+            else
+               cover(j);
+         }
+         goto D2; //recurse
+         
+      D6: // Try next x_l
+         for(auto p = t.back() - 1; p != t.back(); --p) {
+            auto j= _nodes[p]._top;
+            if (j <= 0)
+               p = _nodes[p]._dlink+1; //hacky, fix this
+            else
+               uncover(j);
+         }
+         i = _nodes[t.back()]._top;
+         t.back() = _nodes[t.back()]._dlink;
       }
-      goto D2; //recurse
-      
-   D6: // Try next x_l
-      for(auto p = t.back() - 1; p != t.back(); --p) {
-         auto j= _nodes[p]._top;
-         if (j <= 0)
-            p = _nodes[p]._dlink+1; //hacky, fix this
-         else
-            uncover(j);
-      }
-      i = _nodes[t.back()]._top;
-      t.back() = _nodes[t.back()]._dlink;
-      goto D5;
+
 
    D7: // Backtrack
       uncover(i);
