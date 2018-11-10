@@ -140,7 +140,7 @@ public:
    D2: //Enter level l
       if(_items[0]._rlink == 0) {
          showSolution(t);
-         goto D8;
+         goto D6; //return
       }
    D3: // Choose i
       i = _items[0]._rlink;
