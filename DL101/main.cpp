@@ -133,7 +133,7 @@ public:
    
    void algorithmD() {
       vector<NodePtr> t;
-      NodePtr i;
+      ItemPtr i;
 //   D1: // Initialize
 //      ItemPtr len = 0;
 //      auto z = _nodes.size()-1;
