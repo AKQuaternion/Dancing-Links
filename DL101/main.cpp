@@ -49,29 +49,33 @@ class ExactCover {
       return _nodes[n];
    }
    
-   NodePtr down(NodePtr n) {
+   const Node & deRef(NodePtr n) const {
+      return _nodes[n];
+   }
+   
+   NodePtr down(NodePtr n) const {
       return deRef(n)._dlink;
    }
    
-   NodePtr up(NodePtr n) {
+   NodePtr up(NodePtr n) const {
       return deRef(n)._ulink;
    }
    
-   NodePtr right(NodePtr n) {
+   NodePtr right(NodePtr n) const {
       auto r = n+1;
       if (top(r) <= 0)
          r = up(r);
       return r;
    }
    
-   NodePtr left(NodePtr n) {
+   NodePtr left(NodePtr n) const {
       auto r = n-1;
       if (top(r) <= 0)
          r = down(r);
       return r;
    }
 
-   int top(NodePtr n) {
+   int top(NodePtr n) const {
       return deRef(n)._top;
    }
    
