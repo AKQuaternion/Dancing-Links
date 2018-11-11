@@ -23,29 +23,29 @@ using std::vector;
 class ExactCover;
 ExactCover exampleA();
 
+using NodePtr = size_t;
+using ItemPtr = size_t; //!!! Consider type safety here
+
+struct Node {
+   int _top;
+   NodePtr _ulink;
+   NodePtr _dlink;
+   bool operator==(const Node &rhs) const {
+      return tie(_top,_ulink,_dlink)== tie(rhs._top,rhs._ulink,rhs._dlink);
+   }
+};
+
+struct Item {
+   string _name;
+   NodePtr _llink;
+   NodePtr _rlink;
+   bool operator==(const Item &rhs) const {
+      return tie(_name,_llink,_rlink)== tie(rhs._name,rhs._llink,rhs._rlink);
+   }
+};
+
 class ExactCover {
    friend void exampleATester();
-   
-   using NodePtr = size_t;
-   using ItemPtr = size_t; //!!! Consider type safety here
-   
-   struct Node {
-      int _top;
-      NodePtr _ulink;
-      NodePtr _dlink;
-      bool operator==(const Node &rhs) const {
-         return tie(_top,_ulink,_dlink)== tie(rhs._top,rhs._ulink,rhs._dlink);
-      }
-   };
-   
-   struct Item {
-      string _name;
-      NodePtr _llink;
-      NodePtr _rlink;
-      bool operator==(const Item &rhs) const {
-         return tie(_name,_llink,_rlink)== tie(rhs._name,rhs._llink,rhs._rlink);
-      }
-   };
    
    Node & deRef(NodePtr n) {
       return _nodes[n];
@@ -133,17 +133,26 @@ class ExactCover {
 
 public:
 
-   explicit ExactCover(vector<Item> items, vector<Node> nodes, int /*tag*/) :_items(move(items)),_nodes(move(nodes))
+   explicit ExactCover(vector<Item> items, vector<Node> nodes)
+   :_items(move(items)),_nodes(move(nodes))
    {}
    
-   explicit ExactCover(vector<string> items, vector<vector<size_t>> options) {
-      auto size = items.size()+1;
-      _items.push_back({"-",items.size(),1});
+   explicit ExactCover(vector<string> items, vector<vector<size_t>> options, size_t primary=0) {
+      if(primary==0)
+         primary = items.size();
+      _items.push_back({"-",0,0});
       _nodes.push_back({0,0,0});
-      for(size_t i=0;i<items.size();++i) {
-         _items.push_back({items[i],i,(i+2)%size});
-         _nodes.push_back({0,i+1,i+1});
+      for(const auto & i : items) {
+         auto iNum = _items.size();
+         _items.push_back({i,iNum, iNum});
+         _nodes.push_back({0,iNum, iNum});
       }
+      for(size_t i=0;i<=primary;++i) {
+         _items[i]._llink=i-1;
+         _items[i]._rlink=i+1;
+      }
+      _items[0]._llink = primary;
+      _items[primary]._rlink = 0;
       auto count=0;
       _nodes.push_back({-count,0,0});
       for(const auto & option : options) {
@@ -243,7 +252,7 @@ void exampleATester() {
 
 ExactCover exampleA() {
 
-   return ExactCover({
+   return ExactCover(vector<Item>{
       {"-",7,1},
       {"a",0,2},
       {"b",1,3},
@@ -287,13 +296,44 @@ ExactCover exampleA() {
    });
 }
 
+ExactCover nQueens(int n) {
+   vector<string> items;
+   auto rBase=items.size();
+   for(int i=0;i<n;++i)
+      items.push_back("r" + to_string(i));
+   auto cBase=items.size();
+   for(int i=0;i<n;++i)
+      items.push_back("c" + to_string(i));
+   auto cprBase=items.size();
+   for(int i=0;i<=2*(n-1);++i)
+      items.push_back("c+r=" + to_string(i));
+   auto cmrBase=items.size()+n-1;
+   for(int i=-(n-1);i<n;++i)
+      items.push_back("c-r=" + to_string(i));
+
+   vector<pair<int,int>> coords;
+   vector<vector<size_t>> options;
+   for(int c=0;c<n;++c)
+      for(int r=0;r<n;++r) {
+         vector<size_t> itemIndices;
+         itemIndices.push_back(rBase+r);
+         itemIndices.push_back(cBase+c);
+         itemIndices.push_back(cprBase+r+c);
+         itemIndices.push_back(cmrBase+c-r);
+         options.push_back(itemIndices);
+         coords.push_back({c,r});
+      }
+   
+   return ExactCover(items,options);
+}
+
 int main() {
-//   exampleATester();
-//   auto eA = exampleA();
-//   eA.summarize();
-//   eA.algorithmD();
-   auto fourQ = nQueens(4);
-   fourQ.summarize();
-   fourQ.algorithmD();
+   exampleATester();
+   auto eA = exampleA();
+   eA.summarize();
+   eA.algorithmD();
+//   auto fourQ = nQueens(4);
+//   fourQ.summarize();
+//   fourQ.algorithmD();
    return 0;
 }
