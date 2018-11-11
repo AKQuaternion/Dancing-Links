@@ -40,13 +40,11 @@ struct Item {
    NodePtr _llink;
    NodePtr _rlink;
    bool operator==(const Item &rhs) const {
-      return tie(_name,_llink,_rlink)== tie(rhs._name,rhs._llink,rhs._rlink);
+      return tie(_name,_llink,_rlink) == tie(rhs._name,rhs._llink,rhs._rlink);
    }
 };
 
 class ExactCover {
-   friend void exampleATester();
-   
    Node & deRef(NodePtr n) {
       return _nodes[n];
    }
@@ -170,6 +168,9 @@ public:
       }
    }
    
+   const auto & getItems() {return _items;}
+   const auto & getNodes() {return _nodes;}
+
    void summarize() {
       cout << "Occurences: ";
       for(size_t ii=1;ii<_nodes.size()-1;++ii) {
@@ -207,7 +208,7 @@ public:
             cover(top(p));
          goto D2; //recurse
          
-      D6: // Try next x_l
+      D6: // Try next x_l, return from recursion lands here
          for(auto p = left(t.back()); p != t.back(); p=left(p))
                uncover(top(p));
          i = top(t.back());
@@ -226,7 +227,7 @@ private:
    vector<Node> _nodes;
 };
 
-void exampleATester() {
+ExactCover exampleA() {
    vector<string> items;
    for(auto c='a';c <= 'g'; ++c)
       items.emplace_back(1,c);
@@ -238,20 +239,10 @@ void exampleATester() {
       }
       options.push_back(indices);
    }
-   auto exAByConstructor = ExactCover(items, options);
-   auto exA = exampleA();
-   if (exA._items != exAByConstructor._items)
-      cout << "Items don't match." << endl;
-   else
-      cout << "Items okay." << endl;
-   if (exA._nodes != exAByConstructor._nodes)
-      cout << "Nodes don't match." << endl;
-   else
-      cout << "Nodes okay." << endl;
+   return ExactCover(move(items), move(options));
 }
 
-ExactCover exampleA() {
-
+ExactCover exampleAHardCoded() {
    return ExactCover(vector<Item>{
       {"-",7,1},
       {"a",0,2},
@@ -296,6 +287,19 @@ ExactCover exampleA() {
    });
 }
 
+void exampleATester() {
+   auto exA = exampleA();
+   auto exAHardCoded = exampleAHardCoded();
+   if (exA.getItems() != exAHardCoded.getItems())
+      cout << "Items don't match." << endl;
+   else
+      cout << "Items okay." << endl;
+   if (exA.getNodes() != exAHardCoded.getNodes())
+      cout << "Nodes don't match." << endl;
+   else
+      cout << "Nodes okay." << endl;
+}
+
 ExactCover nQueens(int n) {
    vector<string> items;
    auto rBase=items.size();
@@ -324,16 +328,16 @@ ExactCover nQueens(int n) {
          coords.push_back({c,r});
       }
    
-   return ExactCover(items,options);
+   return ExactCover(items,options,2*n);
 }
 
 int main() {
    exampleATester();
-   auto eA = exampleA();
-   eA.summarize();
-   eA.algorithmD();
-//   auto fourQ = nQueens(4);
-//   fourQ.summarize();
-//   fourQ.algorithmD();
+//   auto eA = exampleA();
+//   eA.summarize();
+//   eA.algorithmD();
+   auto fourQ = nQueens(4);
+   fourQ.summarize();
+   fourQ.algorithmD();
    return 0;
 }
