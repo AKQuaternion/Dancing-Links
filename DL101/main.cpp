@@ -147,8 +147,7 @@ public:
       i = _items[0]._rlink;
 //   D4: // Cover i
       cover(i);
-      t.push_back(_nodes[i]._dlink);
-      while(t.back() != i) {
+      for(t.push_back(_nodes[i]._dlink);t.back() != i;t.back() = _nodes[t.back()]._dlink) {
 //      D5: // Try x_l (in our case, t.back())
          for (auto p = t.back()+1; p != t.back(); ++p) {
             auto j = _nodes[p]._top;
@@ -168,7 +167,6 @@ public:
                uncover(j);
          }
          i = _nodes[t.back()]._top;
-         t.back() = _nodes[t.back()]._dlink;
       }
 
 
