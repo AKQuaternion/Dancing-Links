@@ -19,7 +19,7 @@ using std::vector;
 class ExactCover {
    using NodePtr = size_t;
    using ItemPtr = size_t;
-public:
+   
    struct Node {
       int _top;
       NodePtr _ulink;
@@ -32,12 +32,55 @@ public:
       NodePtr _rlink;
    };
    
+   Node & deRef(NodePtr n) {
+      return _nodes[n];
+   }
+   
+   NodePtr down(NodePtr n) {
+      return deRef(n)._dlink;
+   }
+   
+   NodePtr up(NodePtr n) {
+      return deRef(n)._ulink;
+   }
+   
+   auto top(NodePtr n) {
+      return deRef(n)._top;
+   }
+   
+   NodePtr right(NodePtr n) {
+      auto r = n+1;
+      if (top(r) <= 0)
+         r = up(r);
+      return r;
+   }
+   
+   NodePtr left(NodePtr n) {
+      auto r = n-1;
+      if (top(r) <= 0)
+         r = down(r);
+      return r;
+   }
+//      friend ostream& operator<<(ostream &os, NodePtr n) {
+//         return os << n._val;
+//      }
+//      friend bool operator==(NodePtr lhs, NodePtr rhs) {
+//         return lhs._val == rhs._val;
+//      }
+//      friend bool operator!=(NodePtr lhs, NodePtr rhs) {
+//         return !(lhs == rhs);
+//      }
+
+
+
+public:
+
    explicit ExactCover(vector<Item> items, vector<Node> nodes) :_items(move(items)),_nodes(move(nodes))
    {}
    
    void summarize() {
       cout << "Occurences: ";
-      for(NodePtr ii=1;ii<_nodes.size()-1;++ii) {
+      for(size_t ii=1;ii<_nodes.size()-1;++ii) {
          if (ii<_items.size()) {
             cout << _nodes[ii]._top << _items[ii]._name << " ";
          } else {
@@ -52,21 +95,13 @@ public:
    
    void hide(NodePtr p) {
       // remove everything else in this row from its column list
-      cout << "Hide " << p << endl;
-      auto q=p+1;
-      while (q != p) {
-         auto x = _nodes[q]._top;
-         auto u = _nodes[q]._ulink;
-         auto d = _nodes[q]._dlink;
-         if (x <= 0)
-            q = u;
-         else {
-            cout << "Remove " << q << endl;
-            _nodes[u]._dlink = d;
-            _nodes[d]._ulink = u;
-            --_nodes[x]._top;
-            ++q;
-         }
+//      cout << "Hide " << p << endl;
+      
+      for(auto q=right(p); q != p; q=right(q)) {
+//         cout << "Remove " << q << endl;
+         deRef(up(q))._dlink = down(q);
+         deRef(down(q))._ulink = up(q);
+         --deRef(top(q))._top;
       }
    }
    
@@ -75,12 +110,9 @@ public:
       //     remove every other item in the option from its column
       // remove this item from item list
 
-      cout << "Cover " << i << endl;
-      auto p = _nodes[i]._dlink;
-      while (p != i) {
+//      cout << "Cover " << i << endl;
+      for(auto p = down(i);p != i; p=down(p))
          hide(p);
-         p = _nodes[p]._dlink;
-      }
       auto l = _items[i]._llink;
       auto r = _items[i]._rlink;
       _items[l]._rlink = r;
@@ -88,19 +120,10 @@ public:
    }
    
    void unhide(NodePtr p) {
-      NodePtr q=p-1; //!!! auto?
-      while (q != p) {
-         auto x = _nodes[q]._top;
-         auto u = _nodes[q]._ulink;
-         auto d = _nodes[q]._dlink;
-         if (x <= 0)
-            q = d;
-         else {
-            _nodes[u]._dlink = q;
-            _nodes[d]._ulink = q;
-            ++_nodes[x]._top;
-            --q;
-         }
+      for(auto q=left(p); q != p; q=left(q)) {
+         deRef(up(q))._dlink = q;
+         deRef(down(q))._ulink = q;
+         ++deRef(top(q))._top;
       }
    }
       
@@ -109,23 +132,16 @@ public:
       auto r = _items[i]._rlink;
       _items[l]._rlink = i;
       _items[r]._llink = i;
-      auto p = _nodes[i]._ulink;
-      while (p != i) {
+      for(auto p = up(i);p != i;p=up(p))
          unhide(p);
-         p = _nodes[p]._ulink;
-      }
    }
 
    void showSolution(const vector<NodePtr> t) {
       cout << "Solution: " << endl;
       for(auto n:t) {
          cout << _items[_nodes[n]._top]._name;
-         for (auto p = n+1; p != n; ++p) {
-            auto j = _nodes[p]._top;
-            if (j <= 0)
-               p = _nodes[p]._ulink-1; //hacky, fix this
-            else
-               cout << _items[_nodes[p]._top]._name;
+         for (auto p = right(n); p != n; p=right(p)) {
+               cout << _items[top(p)]._name;
          }
          cout << endl;
       }
@@ -147,26 +163,16 @@ public:
       i = _items[0]._rlink;
 //   D4: // Cover i
       cover(i);
-      for(t.push_back(_nodes[i]._dlink);t.back() != i;t.back() = _nodes[t.back()]._dlink) {
+      for(t.push_back(down(i));t.back() != i;t.back() = down(t.back())) {
 //      D5: // Try x_l (in our case, t.back())
-         for (auto p = t.back()+1; p != t.back(); ++p) {
-            auto j = _nodes[p]._top;
-            if (j <= 0)
-               p = _nodes[p]._ulink-1; //hacky, fix this
-            else
-               cover(j);
-         }
+         for (auto p = right(t.back()); p != t.back(); p=right(p))
+            cover(top(p));
          goto D2; //recurse
          
       D6: // Try next x_l
-         for(auto p = t.back() - 1; p != t.back(); --p) {
-            auto j= _nodes[p]._top;
-            if (j <= 0)
-               p = _nodes[p]._dlink+1; //hacky, fix this
-            else
-               uncover(j);
-         }
-         i = _nodes[t.back()]._top;
+         for(auto p = left(t.back()); p != t.back(); p=left(p))
+               uncover(top(p));
+         i = top(t.back());
       }
 
 
