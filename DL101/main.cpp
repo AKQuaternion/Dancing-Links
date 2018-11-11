@@ -8,28 +8,43 @@
 
 #include <iostream>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 using std::cout;
 using std::endl;
 using std::string;
+using std::to_string;
 using std::move;
+using std::pair;
+using std::tie;
 using std::vector;
 
+class ExactCover;
+ExactCover exampleA();
+
 class ExactCover {
+   friend void exampleATester();
+   
    using NodePtr = size_t;
-   using ItemPtr = size_t;
+   using ItemPtr = size_t; //!!! Consider type safety here
    
    struct Node {
       int _top;
       NodePtr _ulink;
       NodePtr _dlink;
+      bool operator==(const Node &rhs) const {
+         return tie(_top,_ulink,_dlink)== tie(rhs._top,rhs._ulink,rhs._dlink);
+      }
    };
    
    struct Item {
       string _name;
       NodePtr _llink;
       NodePtr _rlink;
+      bool operator==(const Item &rhs) const {
+         return tie(_name,_llink,_rlink)== tie(rhs._name,rhs._llink,rhs._rlink);
+      }
    };
    
    Node & deRef(NodePtr n) {
@@ -42,10 +57,6 @@ class ExactCover {
    
    NodePtr up(NodePtr n) {
       return deRef(n)._ulink;
-   }
-   
-   auto top(NodePtr n) {
-      return deRef(n)._top;
    }
    
    NodePtr right(NodePtr n) {
@@ -61,44 +72,17 @@ class ExactCover {
          r = down(r);
       return r;
    }
-//      friend ostream& operator<<(ostream &os, NodePtr n) {
-//         return os << n._val;
-//      }
-//      friend bool operator==(NodePtr lhs, NodePtr rhs) {
-//         return lhs._val == rhs._val;
-//      }
-//      friend bool operator!=(NodePtr lhs, NodePtr rhs) {
-//         return !(lhs == rhs);
-//      }
 
-
-
-public:
-
-   explicit ExactCover(vector<Item> items, vector<Node> nodes) :_items(move(items)),_nodes(move(nodes))
-   {}
-   
-   void summarize() {
-      cout << "Occurences: ";
-      for(size_t ii=1;ii<_nodes.size()-1;++ii) {
-         if (ii<_items.size()) {
-            cout << _nodes[ii]._top << _items[ii]._name << " ";
-         } else {
-            if (_nodes[ii]._top <= 0)
-               cout << endl << "Option " << -_nodes[ii]._top << ": ";
-            else
-               cout << _items[_nodes[ii]._top]._name;
-         }
-      }
-      cout << endl;
+   int top(NodePtr n) {
+      return deRef(n)._top;
    }
    
    void hide(NodePtr p) {
       // remove everything else in this row from its column list
-//      cout << "Hide " << p << endl;
+      //      cout << "Hide " << p << endl;
       
       for(auto q=right(p); q != p; q=right(q)) {
-//         cout << "Remove " << q << endl;
+         //         cout << "Remove " << q << endl;
          deRef(up(q))._dlink = down(q);
          deRef(down(q))._ulink = up(q);
          --deRef(top(q))._top;
@@ -109,8 +93,8 @@ public:
       // for each option using this item (including this one)
       //     remove every other item in the option from its column
       // remove this item from item list
-
-//      cout << "Cover " << i << endl;
+      
+      //      cout << "Cover " << i << endl;
       for(auto p = down(i);p != i; p=down(p))
          hide(p);
       auto l = _items[i]._llink;
@@ -126,7 +110,7 @@ public:
          ++deRef(top(q))._top;
       }
    }
-      
+   
    void uncover(ItemPtr i) {
       auto l = _items[i]._llink;
       auto r = _items[i]._rlink;
@@ -135,16 +119,61 @@ public:
       for(auto p = up(i);p != i;p=up(p))
          unhide(p);
    }
-
+   
    void showSolution(const vector<NodePtr> t) {
       cout << "Solution: " << endl;
       for(auto n:t) {
-         cout << _items[_nodes[n]._top]._name;
+         cout << _items[_nodes[n]._top]._name << " ";
          for (auto p = right(n); p != n; p=right(p)) {
-               cout << _items[top(p)]._name;
+            cout << _items[top(p)]._name << " ";
          }
          cout << endl;
       }
+   }
+
+public:
+
+   explicit ExactCover(vector<Item> items, vector<Node> nodes, int /*tag*/) :_items(move(items)),_nodes(move(nodes))
+   {}
+   
+   explicit ExactCover(vector<string> items, vector<vector<size_t>> options) {
+      auto size = items.size()+1;
+      _items.push_back({"-",items.size(),1});
+      _nodes.push_back({0,0,0});
+      for(size_t i=0;i<items.size();++i) {
+         _items.push_back({items[i],i,(i+2)%size});
+         _nodes.push_back({0,i+1,i+1});
+      }
+      auto count=0;
+      _nodes.push_back({-count,0,0});
+      for(const auto & option : options) {
+         auto start = _nodes.size();
+         _nodes.back()._dlink = start+option.size()-1;
+         for(const auto item : option) {
+            auto myIndex = _nodes.size();
+            _nodes.push_back({int(item+1),up(item+1),item+1});
+            deRef(down(myIndex))._ulink = myIndex;
+            deRef(up(myIndex))._dlink = myIndex;
+            ++deRef(top(myIndex))._top;
+         }
+         ++count;
+         _nodes.push_back({-count,start,0});
+      }
+   }
+   
+   void summarize() {
+      cout << "Occurences: ";
+      for(size_t ii=1;ii<_nodes.size()-1;++ii) {
+         if (ii<_items.size()) {
+            cout << _items[ii]._name << ":" << _nodes[ii]._top << " ";
+         } else {
+            if (_nodes[ii]._top <= 0)
+               cout << endl << "Option " << -_nodes[ii]._top << ": ";
+            else
+               cout << _items[_nodes[ii]._top]._name << " ";
+         }
+      }
+      cout << endl;
    }
    
    void algorithmD() {
@@ -175,7 +204,6 @@ public:
          i = top(t.back());
       }
 
-
    D7: // Backtrack
       uncover(i);
    D8: // Leave level l
@@ -188,6 +216,30 @@ private:
    vector<Item> _items;
    vector<Node> _nodes;
 };
+
+void exampleATester() {
+   vector<string> items;
+   for(auto c='a';c <= 'g'; ++c)
+      items.emplace_back(1,c);
+   vector<vector<size_t>> options;
+   for(const string &s : {"ce","adg","bcf","adf","bg","deg"}) {
+      vector<size_t> indices;
+      for(auto c:s) {
+         indices.push_back(c-'a');
+      }
+      options.push_back(indices);
+   }
+   auto exAByConstructor = ExactCover(items, options);
+   auto exA = exampleA();
+   if (exA._items != exAByConstructor._items)
+      cout << "Items don't match." << endl;
+   else
+      cout << "Items okay." << endl;
+   if (exA._nodes != exAByConstructor._nodes)
+      cout << "Nodes don't match." << endl;
+   else
+      cout << "Nodes okay." << endl;
+}
 
 ExactCover exampleA() {
 
@@ -236,8 +288,12 @@ ExactCover exampleA() {
 }
 
 int main() {
-   auto eA = exampleA();
-   eA.summarize();
-   eA.algorithmD();
+//   exampleATester();
+//   auto eA = exampleA();
+//   eA.summarize();
+//   eA.algorithmD();
+   auto fourQ = nQueens(4);
+   fourQ.summarize();
+   fourQ.algorithmD();
    return 0;
 }
