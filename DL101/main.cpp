@@ -6,11 +6,15 @@
 //  Copyright © 2018 Chris Hartman. All rights reserved.
 //
 
+#include <functional>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
+using std::function;
+using std::setw;
 using std::cout;
 using std::endl;
 using std::string;
@@ -122,19 +126,22 @@ class ExactCover {
          unhide(p);
    }
    
-   void showSolution(const vector<NodePtr> t) {
-      cout << "Solution: " << endl;
+   void registerSolution(const vector<NodePtr> & t) {
+      
+   }
+   
+public:
+   void showOptions(const vector<NodePtr> & t) const {
       for(auto n:t) {
-         cout << _items[_nodes[n]._top]._name << " ";
+         cout << setw(5) << optionOf(n) << ": ";
+         cout << _items[top(n)]._name << " ";
          for (auto p = right(n); p != n; p=right(p)) {
             cout << _items[top(p)]._name << " ";
          }
          cout << endl;
       }
    }
-
-public:
-
+   
    explicit ExactCover(vector<Item> items, vector<Node> nodes)
    :_items(move(items)),_nodes(move(nodes))
    {}
@@ -172,25 +179,37 @@ public:
       }
    }
    
-   const auto & getItems() {return _items;}
-   const auto & getNodes() {return _nodes;}
+   const auto & getItems() const {return _items;}
+   const auto & getNodes() const {return _nodes;}
 
-   void summarize() {
+   int optionOf(NodePtr n) const {
+      while (top(n)>0)
+         --n;
+      return -top(n);
+   }
+   
+   void summarize() const {
       cout << "Occurences: ";
       for(size_t ii=1;ii<_nodes.size()-1;++ii) {
          if (ii<_items.size()) {
-            cout << _items[ii]._name << ":" << _nodes[ii]._top << " ";
+            cout << _items[ii]._name << ":" << top(ii) << " ";
          } else {
-            if (_nodes[ii]._top <= 0)
-               cout << endl << "Option " << -_nodes[ii]._top << ": ";
+            if (top(ii) <= 0)
+               cout << endl << "Option " << -top(ii) << ": ";
             else
-               cout << _items[_nodes[ii]._top]._name << " ";
+               cout << _items[top(ii)]._name << " ";
          }
       }
       cout << endl;
    }
    
-   void algorithmD() {
+   void algorithmD(function<void(const vector<NodePtr> &, const ExactCover *ec)> sol = {}) {
+      if (!sol)
+         sol = [](auto t, auto ec){
+            cout << "Solution: " << endl;
+            ec->showOptions(t);
+         };
+      
       vector<NodePtr> t;
       ItemPtr i;
 //   D1: // Initialize
@@ -199,7 +218,7 @@ public:
       
    D2: //Enter level l
       if(_items[0]._rlink == 0) {
-         showSolution(t);
+         sol(t,this);
          goto D6; //return
       }
 //   D3: // Choose i
@@ -304,7 +323,7 @@ void exampleATester() {
       cout << "Nodes okay." << endl;
 }
 
-ExactCover nQueens(int n) {
+void nQueens(int n) {
    vector<string> items;
    auto rBase=items.size();
    for(int i=0;i<n;++i)
@@ -331,8 +350,23 @@ ExactCover nQueens(int n) {
          options.push_back(itemIndices);
          coords.push_back({c,r});
       }
-   
-   return ExactCover(items,options,2*n);
+   auto drawSolution = [&](const vector<NodePtr> &t, const ExactCover *ec) {
+      vector<vector<int>> b(n,vector<int>(n));
+      for(auto node:t) {
+         auto i = ec->optionOf(node);
+         b[coords[i].first][coords[i].second] = 1;
+      }
+      for(const auto & row : b) {
+         for(auto c:row) {
+            cout << (c?'Q':'.') << ' ';
+         }
+         cout << endl;
+      }
+      cout << "--------" << endl;
+   };
+   auto fourQ = ExactCover(items,options,2*n);
+   fourQ.summarize();
+   fourQ.algorithmD(drawSolution);
 }
 
 int main() {
@@ -340,8 +374,7 @@ int main() {
 //   auto eA = exampleA();
 //   eA.summarize();
 //   eA.algorithmD();
-   auto fourQ = nQueens(4);
-   fourQ.summarize();
-   fourQ.algorithmD();
+   nQueens(12);
+
    return 0;
 }
